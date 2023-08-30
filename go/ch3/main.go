@@ -24,10 +24,14 @@ func main() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "image/svg+xml")
-	fmt.Printf("<svg xmlns='http://www.w3.org/2000/svg' "+
+	w.Header().Set("Content-Type", "text/html")
+
+	fmt.Fprint(w, "<!DOCTYPE html><html><body>")
+
+	fmt.Fprintf(w, "<svg xmlns='http://www.w3.org/2000/svg' "+
 		"style='stroke: grey; stroke-width: 0.7' "+
 		"width='%d' height='%d'>", width, height)
+
 	for i := 0; i < cells; i++ {
 		for j := 0; j < cells; j++ {
 			ax, ay, z1, validA := corner(i+1, j)
@@ -36,12 +40,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			dx, dy, z4, validD := corner(i+1, j+1)
 			if validA && validB && validC && validD {
 				color := computeColor([]float64{z1, z2, z3, z4})
-				fmt.Printf("<polygon points='%g,%g,%g,%g,%g,%g,%g,%g' fill='%s'/>\n",
+				fmt.Fprintf(w, "<polygon points='%g,%g,%g,%g,%g,%g,%g,%g' fill='%s'/>\n",
 					ax, ay, bx, by, cx, cy, dx, dy, color)
 			}
 		}
 	}
-	fmt.Println("</svg>")
+	fmt.Fprint(w, "</svg>")
+	fmt.Fprint(w, "</body></html>")
 }
 
 func computeColor(heights []float64) string {
