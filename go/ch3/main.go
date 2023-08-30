@@ -51,6 +51,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		customColor = colorVal
 	}
 
+	surfaceType := q.Get("type")
+
 	fmt.Fprint(w, "<!DOCTYPE html><html><body>")
 
 	fmt.Fprintf(w, "<svg xmlns='http://www.w3.org/2000/svg' "+
@@ -59,11 +61,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	for i := 0; i < cells; i++ {
 		for j := 0; j < cells; j++ {
-			ax, ay, z1, validA := corner(i+1, j, xyscale, zscale, customWidth, customHeight)
-			bx, by, z2, validB := corner(i, j, xyscale, zscale, customWidth, customHeight)
-			cx, cy, z3, validC := corner(i, j+1, xyscale, zscale, customWidth, customHeight)
-			dx, dy, z4, validD := corner(i+1, j+1, xyscale, zscale, customWidth, customHeight)
-
+			ax, ay, z1, validA := corner(i+1, j, xyscale, zscale, customWidth, customHeight, surfaceType)
+			bx, by, z2, validB := corner(i, j, xyscale, zscale, customWidth, customHeight, surfaceType)
+			cx, cy, z3, validC := corner(i, j+1, xyscale, zscale, customWidth, customHeight, surfaceType)
+			dx, dy, z4, validD := corner(i+1, j+1, xyscale, zscale, customWidth, customHeight, surfaceType)
 			if validA && validB && validC && validD {
 				color := computeColor([]float64{z1, z2, z3, z4})
 				fmt.Fprintf(w, "<polygon points='%g,%g,%g,%g,%g,%g,%g,%g' fill='%s'/>\n",
@@ -104,14 +105,13 @@ func isValidColor(s string) bool {
 	matched, _ := regexp.MatchString(`^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$|^[a-zA-Z]+$`, s)
 	return matched
 }
-func corner(i, j int, xyscale, zscale float64, customWidth, customHeight int) (float64, float64, float64, bool) {
-
-	// Essentially the same as your `corner` function, but use `xyscale` and `zscale` arguments instead of the constants.
+func corner(i, j int, xyscale, zscale float64, customWidth, customHeight int, surfaceType string) (float64, float64, float64, bool) {
+	// Find point (x,y) at corner of cell (i,j)
 	x := xyrange * (float64(i)/cells - 0.5)
 	y := xyrange * (float64(j)/cells - 0.5)
 
-	// Compute surface height z
-	z := f(x, y)
+	// Compute surface height z using the specified surface type
+	z := f(x, y, surfaceType)
 
 	if math.IsNaN(z) || math.IsInf(z, 0) {
 		return 0, 0, 0, false
@@ -123,10 +123,21 @@ func corner(i, j int, xyscale, zscale float64, customWidth, customHeight int) (f
 
 	return sx, sy, z, true
 }
-func f(x, y float64) float64 {
-	r := math.Hypot(x, y) // distance from (0,0)
-	if r == 0 {
-		return 0
+
+func f(x, y float64, surfaceType string) float64 {
+	switch surfaceType {
+	case "egg":
+		return math.Cos(x) * math.Cos(y)
+	case "saddle":
+		return x*x - y*y
+	case "mogul":
+		alpha := 5.0
+		return math.Exp(-alpha * (x*x + y*y))
+	default: // "hypot" or any other value
+		r := math.Hypot(x, y)
+		if r == 0 {
+			return 0
+		}
+		return math.Sin(r) / r
 	}
-	return math.Sin(r) / r
 }
