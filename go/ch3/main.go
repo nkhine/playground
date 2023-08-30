@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"regexp"
+	"strconv"
 )
 
 const (
@@ -26,18 +28,42 @@ func main() {
 func handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
+	// Extract values from query parameters
+	q := r.URL.Query()
+	customWidth := width
+	customHeight := height
+	customColor := "grey" // Default color
+
+	// Check for width and height parameters
+	if wVal, err := strconv.Atoi(q.Get("width")); err == nil && wVal > 0 {
+		customWidth = wVal
+	}
+	if hVal, err := strconv.Atoi(q.Get("height")); err == nil && hVal > 0 {
+		customHeight = hVal
+	}
+
+	// Recompute scales
+	xyscale := float64(customWidth) / 2 / xyrange
+	zscale := float64(customHeight) * 0.4
+
+	// Check for color parameter (and validate it's a color value to avoid XSS issues)
+	if colorVal := q.Get("color"); colorVal != "" && isValidColor(colorVal) {
+		customColor = colorVal
+	}
+
 	fmt.Fprint(w, "<!DOCTYPE html><html><body>")
 
 	fmt.Fprintf(w, "<svg xmlns='http://www.w3.org/2000/svg' "+
-		"style='stroke: grey; stroke-width: 0.7' "+
-		"width='%d' height='%d'>", width, height)
+		"style='stroke: %s; stroke-width: 0.7' "+
+		"width='%d' height='%d'>", customColor, customWidth, customHeight)
 
 	for i := 0; i < cells; i++ {
 		for j := 0; j < cells; j++ {
-			ax, ay, z1, validA := corner(i+1, j)
-			bx, by, z2, validB := corner(i, j)
-			cx, cy, z3, validC := corner(i, j+1)
-			dx, dy, z4, validD := corner(i+1, j+1)
+			ax, ay, z1, validA := corner(i+1, j, xyscale, zscale, customWidth, customHeight)
+			bx, by, z2, validB := corner(i, j, xyscale, zscale, customWidth, customHeight)
+			cx, cy, z3, validC := corner(i, j+1, xyscale, zscale, customWidth, customHeight)
+			dx, dy, z4, validD := corner(i+1, j+1, xyscale, zscale, customWidth, customHeight)
+
 			if validA && validB && validC && validD {
 				color := computeColor([]float64{z1, z2, z3, z4})
 				fmt.Fprintf(w, "<polygon points='%g,%g,%g,%g,%g,%g,%g,%g' fill='%s'/>\n",
@@ -45,6 +71,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+
 	fmt.Fprint(w, "</svg>")
 	fmt.Fprint(w, "</body></html>")
 }
@@ -70,25 +97,32 @@ func computeColor(heights []float64) string {
 	return fmt.Sprintf("#%02x%02x%02x", r, 0, b)
 }
 
-func corner(i, j int) (float64, float64, float64, bool) {
-	// Find point (x,y) at corner of cell (i,j)
+// Validates if a string is a valid HTML color (simple check for this example)
+func isValidColor(s string) bool {
+	// A simple regex to match common color values (hex, named colors, etc.).
+	// Note: This is a basic validation and might not capture all valid HTML color values.
+	matched, _ := regexp.MatchString(`^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$|^[a-zA-Z]+$`, s)
+	return matched
+}
+func corner(i, j int, xyscale, zscale float64, customWidth, customHeight int) (float64, float64, float64, bool) {
+
+	// Essentially the same as your `corner` function, but use `xyscale` and `zscale` arguments instead of the constants.
 	x := xyrange * (float64(i)/cells - 0.5)
 	y := xyrange * (float64(j)/cells - 0.5)
 
 	// Compute surface height z
 	z := f(x, y)
 
-	// Check if z is NaN or Infinity
 	if math.IsNaN(z) || math.IsInf(z, 0) {
 		return 0, 0, 0, false
 	}
 
 	// Project (x,y,z) isometrically onto 2-D
-	sx := width/2 + (x-y)*cos30*xyscale
-	sy := height/2 + (x+y)*sin30*xyscale - z*zscale
+	sx := float64(customWidth)/2 + (x-y)*cos30*xyscale
+	sy := float64(customHeight)/2 + (x+y)*sin30*xyscale - z*zscale
+
 	return sx, sy, z, true
 }
-
 func f(x, y float64) float64 {
 	r := math.Hypot(x, y) // distance from (0,0)
 	if r == 0 {
