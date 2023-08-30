@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"net/http"
 )
 
 const (
@@ -17,6 +18,13 @@ const (
 var sin30, cos30 = math.Sin(angle), math.Cos(angle)
 
 func main() {
+	http.HandleFunc("/", handler)
+	fmt.Println("Starting server on port 3000")
+	http.ListenAndServe(":3000", nil)
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "image/svg+xml")
 	fmt.Printf("<svg xmlns='http://www.w3.org/2000/svg' "+
 		"style='stroke: grey; stroke-width: 0.7' "+
 		"width='%d' height='%d'>", width, height)
