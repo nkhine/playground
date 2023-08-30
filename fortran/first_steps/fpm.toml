@@ -1,0 +1,18 @@
+name = "first_steps"
+version = "0.1.0"
+license = "license"
+author = "Norman Khine"
+maintainer = "norman@khine.net"
+copyright = "Copyright 2023, Norman Khine"
+[build]
+auto-executables = true
+auto-tests = true
+auto-examples = true
+module-naming = false
+[install]
+library = false
+[fortran]
+implicit-typing = false
+implicit-external = false
+source-form = "free"
+
