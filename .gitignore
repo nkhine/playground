@@ -56,3 +56,5 @@ settings.json
 *.tmp
 *.swp
 *.bak
+
+target
