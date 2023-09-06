@@ -17,3 +17,42 @@
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+.terraform
+# Dependency directories
+node_modules
+npm-debug.log
+yarn-error.log
+
+# iOS build artifacts
+ios/build/
+ios/Pods/
+*.xcworkspace
+*.xcodeproj
+*.xcuserstate
+*.moved-aside
+DerivedData
+
+# Android build artifacts
+android/app/build/
+android/.gradle/
+
+# Keystore
+*.keystore
+
+# JetBrains (IntelliJ, Android Studio, WebStorm, etc.)
+.idea
+*.iml
+
+# macOS artifacts
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# VS Code configurations
+.vscode/
+settings.json
+
+# tmp
+*.tmp
+*.swp
+*.bak
